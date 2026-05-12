@@ -1,69 +1,60 @@
 // data/services/local_storage_service.dart
 import 'dart:convert';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/product.dart';
 
 class LocalStorageService {
-  static Future<File> _getFavoritesFile() async {
-    final directory = await getApplicationSupportDirectory();
-    final file = File('${directory.path}/favorites.json');
-    await file.parent.create(recursive: true);
-    return file;
-  }
+  static const String _favKey = 'favorite_products';
+  static const String _cacheKey = 'products_cache';
 
-  static Future<File> _getCacheFile() async {
-    final directory = await getApplicationSupportDirectory();
-    final file = File('${directory.path}/products_cache.json');
-    await file.parent.create(recursive: true);
-    return file;
-  }
-
-  // حفظ المفضلات
+  // 1. حفظ المفضلات (تستخدم الشيرد بريفرنس لتعمل في الويب والموبايل)
   static Future<void> saveFavorites(List<Product> favorites) async {
     try {
-      final file = await _getFavoritesFile();
-      final jsonList = favorites.map((p) => p.toJson()).toList();
-      await file.writeAsString(jsonEncode(jsonList));
+      final prefs = await SharedPreferences.getInstance();
+      final String encodedData = jsonEncode(
+        favorites.map((p) => p.toJson()).toList(),
+      );
+      await prefs.setString(_favKey, encodedData);
+      print("✅ تم حفظ المفضلات في التخزين المحلي");
     } catch (e) {
-      print("Error saving favorites: $e");
+      print("❌ خطأ أثناء حفظ المفضلات: $e");
     }
   }
 
-  // تحميل المفضلات
+  // 2. تحميل المفضلات
   static Future<List<Product>> loadFavorites() async {
     try {
-      final file = await _getFavoritesFile();
-      if (await file.exists()) {
-        final contents = await file.readAsString();
-        final List<dynamic> jsonList = jsonDecode(contents);
-        return jsonList.map((json) => Product.fromJson(json)).toList();
+      final prefs = await SharedPreferences.getInstance();
+      final String? savedData = prefs.getString(_favKey);
+
+      if (savedData != null) {
+        final List<dynamic> decodedData = jsonDecode(savedData);
+        return decodedData.map((json) => Product.fromJson(json)).toList();
       }
     } catch (e) {
-      print("Error loading favorites: $e");
+      print("❌ خطأ أثناء تحميل المفضلات: $e");
     }
     return [];
   }
 
-  // ✅ Exercise 3: حفظ Cache
+  // 3. حفظ Cache المنتجات (للوضع الأوفلاين)
   static Future<void> cacheProducts(String jsonString) async {
     try {
-      final file = await _getCacheFile();
-      await file.writeAsString(jsonString);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_cacheKey, jsonString);
+      print("✅ تم تحديث كاش المنتجات");
     } catch (e) {
-      print("Error caching products: $e");
+      print("❌ خطأ أثناء تخزين الكاش: $e");
     }
   }
 
-  // ✅ Exercise 3: تحميل Cache
+  // 4. تحميل Cache المنتجات
   static Future<String?> loadCachedProducts() async {
     try {
-      final file = await _getCacheFile();
-      if (await file.exists()) {
-        return await file.readAsString();
-      }
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_cacheKey);
     } catch (e) {
-      print("Error loading cached products: $e");
+      print("❌ خطأ أثناء تحميل الكاش: $e");
     }
     return null;
   }
