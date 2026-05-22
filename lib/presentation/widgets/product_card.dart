@@ -1,24 +1,25 @@
 // presentation/widgets/product_card.dart
+// presentation/widgets/product_card.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart'; // 🔥 أعدنا استيراد المكتبة
+import 'package:cached_network_image/cached_network_image.dart';
 
-import 'product_modal.dart';
+// 🔥 تم تنظيف الاستيرادات لتجنب خطأ "تعارض الأنواع" (Type Mismatch)
 import '../../data/providers/app_provider.dart';
 import '../../data/models/product.dart';
+import 'product_modal.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
 
   const ProductCard({super.key, required this.product});
 
-  // 🔥 دالة بناء الصورة تدعم الكاش (حفظ الصور) ودائرة التحميل
+  // دالة بناء الصورة تدعم الكاش (حفظ الصور) ودائرة التحميل
   Widget buildImage(String url) {
     if (url.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: url,
         fit: BoxFit.cover,
-        // 🔥 دائرة التحميل التي تظهر أثناء جلب الصورة من الإنترنت
         placeholder: (context, url) => Container(
           color: Colors.grey.shade100,
           child: const Center(
@@ -28,7 +29,6 @@ class ProductCard extends StatelessWidget {
             ),
           ),
         ),
-        // 🔥 في حال لم تكن الصورة محفوظة في الكاش ولم يوجد إنترنت
         errorWidget: (context, url, error) => Container(
           color: Colors.grey.shade100,
           child: const Column(
@@ -64,7 +64,8 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AppProvider>(
       builder: (context, provider, child) {
-        final isFav = product.isFavorite;
+        // 🔥 التعديل الجوهري: نتحقق من المفضلة عبر السحابة (الفايربيس)
+        final isFav = provider.isProductFavorite(product.id.toString());
 
         return GestureDetector(
           onTap: () {
@@ -110,13 +111,17 @@ class ProductCard extends StatelessWidget {
                         top: 8,
                         right: 8,
                         child: GestureDetector(
-                          onTap: () => provider.toggleFavorite(product.id),
+                          onTap: () => provider.toggleFavorite(
+                              product.id.toString()), // 🔥 إرسال الـ id للسحابة
                           child: CircleAvatar(
                             radius: 16,
                             backgroundColor: Colors.white,
                             child: Icon(
                               isFav ? Icons.favorite : Icons.favorite_border,
-                              color: Colors.red,
+                              color: isFav
+                                  ? Colors.red
+                                  : Colors
+                                      .grey, // 🔥 تغيير اللون بناءً على حالة السحابة
                               size: 18,
                             ),
                           ),

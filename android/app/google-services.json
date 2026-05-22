@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "832689720513",
+    "project_id": "skincare-app-2a31f",
+    "storage_bucket": "skincare-app-2a31f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:832689720513:android:6cc1bab3dabeb3684ad840",
+        "android_client_info": {
+          "package_name": "com.example.skincare"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALGef4_M_ZX_e52Zv1RbPcmW7yptpP4kY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

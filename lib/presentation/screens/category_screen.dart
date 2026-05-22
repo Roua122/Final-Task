@@ -45,7 +45,7 @@ class CategoryScreen extends StatelessWidget {
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : provider.products.isEmpty
-              ? const Center(child: Text('جاري تحميل المنتجات...'))
+              ? const Center(child: Text('loading...'))
               : GridView.builder(
                   padding: const EdgeInsets.all(20),
                   itemCount: categories.length,

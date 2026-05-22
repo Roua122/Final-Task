@@ -13,20 +13,21 @@ class CategoryProductsPage extends StatelessWidget {
     final provider = context.watch<AppProvider>();
     final allProducts = provider.products;
 
-    final displayedProducts = allProducts;
+    // 🔥 فلترة المنتجات حسب التصنيف
+    final displayedProducts =
+        allProducts.where((product) => product.category == category).toList();
 
     return Scaffold(
-      // 🔥 حل مشكلة السواد
       backgroundColor: const Color(0xFFF8F8F5),
-
       appBar: AppBar(
         title: Text(category),
         backgroundColor: Colors.white,
         elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black), // لون زر الرجوع
+        titleTextStyle: const TextStyle(
+            color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
       ),
-
       body: Container(
-        // 🔥 خلفية ناعمة (بيج + أبيض + أخضر خفيف مثل ما طلبت)
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -38,7 +39,6 @@ class CategoryProductsPage extends StatelessWidget {
             end: Alignment.bottomCenter,
           ),
         ),
-
         child: provider.isLoading
             ? const Center(
                 child: CircularProgressIndicator(
@@ -47,7 +47,10 @@ class CategoryProductsPage extends StatelessWidget {
               )
             : displayedProducts.isEmpty
                 ? const Center(
-                    child: Text('لا توجد منتجات متاحة حالياً'),
+                    child: Text(
+                      'لا توجد منتجات متاحة في هذا التصنيف حالياً',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
                   )
                 : GridView.builder(
                     padding: const EdgeInsets.all(20),

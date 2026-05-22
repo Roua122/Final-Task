@@ -1,254 +1,156 @@
 // data/providers/app_provider.dart
-
-import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import 'package:skincare/data/services/api_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/product.dart';
-import '../services/local_storage_service.dart';
 
 class CartItem {
   final String id;
   final Product product;
   int quantity;
-
-  CartItem({
-    required this.id,
-    required this.product,
-    this.quantity = 1,
-  });
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'product': product.toJson(),
-        'quantity': quantity,
-      };
-
-  factory CartItem.fromJson(Map<String, dynamic> json) => CartItem(
-        id: json['id'],
-        product: Product.fromJson(json['product']),
-        quantity: json['quantity'],
-      );
+  CartItem({required this.id, required this.product, this.quantity = 1});
 }
 
 class AppProvider with ChangeNotifier {
-  // ================= PRODUCTS =================
   List<Product> _products = [];
   bool isLoading = true;
-  bool isOfflineMode = false;
-  String? _error;
-
-  String? get error => _error;
-  List<Product> get products => _products;
-
-  // ================= CART =================
+  bool isOfflineMode = false; 
   final Map<String, CartItem> _cartItems = {};
+  List<String> _favoriteIds = []; 
+  
+  StreamSubscription<QuerySnapshot>? _productsSubscription;
+  StreamSubscription<DocumentSnapshot>? _favoritesSubscription; 
+  StreamSubscription<User?>? _authSubscription;
 
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  List<Product> get products => _products;
+  bool get loading => isLoading;
   Map<String, CartItem> get cartItems => _cartItems;
 
-  int get cartCount {
-    int count = 0;
-    for (var item in _cartItems.values) {
-      count += item.quantity;
-    }
-    return count;
+  AppProvider() {
+    init(); // 🔥 نستدعي init عند إنشاء البروفايدر لأول مرة
   }
 
-  double get totalPrice {
-    double total = 0;
-    for (var item in _cartItems.values) {
-      total += item.product.price * item.quantity;
-    }
-    return total;
-  }
-
-  // ================= FAVORITES =================
-  List<Product> get favoriteProducts =>
-      _products.where((p) => p.isFavorite).toList();
-
-  // ================= INIT =================
+  // ================= 🔥 الدالة المفقودة التي تسبب الخطأ =================
   Future<void> init() async {
-    await loadProducts();
-
-    await Future.wait([
-      _loadSavedFavorites(),
-      _loadSavedCart(),
-    ]);
+    listenToProducts();
+    
+    // نراقب الفايربيس: هل دخل مستخدم؟
+    _authSubscription?.cancel();
+    _authSubscription = _auth.authStateChanges().listen((User? user) {
+      if (user != null) {
+        listenToFavorites();
+      } else {
+        _favoritesSubscription?.cancel();
+        _favoriteIds.clear();
+        _cartItems.clear();
+        notifyListeners();
+      }
+    });
   }
 
-  // ================= LOAD PRODUCTS =================
-  Future<void> loadProducts({bool forceRefresh = false}) async {
-    // منع التحميل المتكرر إذا كانت البيانات موجودة والتحميل ليس قسرياً
-    if (!forceRefresh && isLoading && _products.isNotEmpty) return;
-
+  // ================= ☁️ FIREBASE PRODUCTS =================
+  void listenToProducts() {
     isLoading = true;
-    _error = null;
     notifyListeners();
 
-    // متغير لتتبع ما إذا تم التحميل بنجاح من الإنترنت
-    bool onlineSuccess = false;
-
-    try {
-      // محاولة التحميل من الإنترنت
-      _products = await ApiService.fetchProducts();
-      onlineSuccess = true;
-      isOfflineMode = false;
-
-      // حفظ البيانات في الكاش (للاستخدام دون اتصال لاحقاً)
-      final jsonString = jsonEncode(_products.map((p) => p.toJson()).toList());
-      await LocalStorageService.cacheProducts(jsonString);
-      print("✅ تم تحميل ${_products.length} منتج من الإنترنت وحفظها في الكاش");
-    } catch (networkError) {
-      // فشل الاتصال بالإنترنت أو مهلة زمنية
-      print("❌ فشل الاتصال: $networkError. محاولة التحميل من الكاش...");
-      try {
-        final cached = await LocalStorageService.loadCachedProducts();
-        if (cached != null && cached.isNotEmpty) {
-          final List<dynamic> jsonList = jsonDecode(cached);
-          if (jsonList.isNotEmpty) {
-            _products = jsonList.map((json) => Product.fromJson(json)).toList();
-            isOfflineMode = true;
-            _error = "وضع غير متصل - يتم عرض بيانات مخزنة مؤقتاً";
-            print("✅ تم تحميل ${_products.length} منتج من الكاش");
-          } else {
-            _products = [];
-            _error = "لا توجد بيانات مخزنة صالحة";
-          }
-        } else {
-          _products = [];
-          _error = "لا يوجد اتصال بالإنترنت ولا توجد بيانات مخزنة مسبقًا";
-        }
-      } catch (cacheError) {
-        // أي خطأ في قراءة أو تحليل الكاش (مثل ملف تالف)
-        _products = [];
-        _error = "خطأ في قراءة البيانات المخزنة: $cacheError";
-        print("❌ خطأ في الكاش: $cacheError");
-      }
-    } finally {
-      // 🔥 أهم خطوة: نضمن تعيين isLoading = false في جميع الأحوال
+    _productsSubscription?.cancel();
+    _productsSubscription = FirebaseFirestore.instance
+        .collection('products')
+        .snapshots()
+        .listen((snapshot) {
+      _products = snapshot.docs.map((doc) {
+        return Product.fromMap(doc.data(), doc.id);
+      }).toList();
       isLoading = false;
-      if (hasListeners) notifyListeners();
-    }
-
-    // إذا نجح التحميل من الإنترنت، يمكننا تحديث المفضلات والسلة (اختياري)
-    if (onlineSuccess) {
-      await _applySavedFavorites();
-      await _loadSavedCart(); // تأكد من وجود هذه الدالة
-    } else {
-      // في وضع الأوفلاين، نطبق المفضلات المخزنة على البيانات الحالية (من الكاش)
-      await _applySavedFavorites();
-    }
-  }
-
-  // ================= FAVORITES =================
-  void toggleFavorite(String id) async {
-    final index = _products.indexWhere((p) => p.id.toString() == id);
-
-    if (index != -1) {
-      _products[index].isFavorite = !_products[index].isFavorite;
-
       notifyListeners();
-
-      await LocalStorageService.saveFavorites(favoriteProducts);
-    }
+    });
   }
 
-  Future<void> _loadSavedFavorites() async {
-    await _applySavedFavorites();
-  }
+  // ================= ❤️ FAVORITES =================
+  void listenToFavorites() {
+    User? user = _auth.currentUser;
+    if (user == null) return;
 
-  Future<void> _applySavedFavorites() async {
-    final saved = await LocalStorageService.loadFavorites();
-
-    for (var fav in saved) {
-      final index = _products.indexWhere(
-        (p) => p.id.toString() == fav.id.toString(),
-      );
-
-      if (index != -1) {
-        _products[index].isFavorite = true;
+    _favoritesSubscription?.cancel();
+    _favoritesSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.exists) {
+        _favoriteIds = List<String>.from(snapshot.data()?['favorites'] ?? []);
+      } else {
+        _favoriteIds = [];
       }
+      notifyListeners(); 
+    });
+  }
+
+  Future<void> toggleFavorite(String id) async {
+    User? user = _auth.currentUser;
+    if (user == null) return;
+
+    DocumentReference userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+    if (_favoriteIds.contains(id)) {
+      await userRef.set({
+        'favorites': FieldValue.arrayRemove([id])
+      }, SetOptions(merge: true));
+    } else {
+      await userRef.set({
+        'favorites': FieldValue.arrayUnion([id])
+      }, SetOptions(merge: true));
     }
   }
 
-  bool isFavorite(String id) {
-    return _products.any(
-      (p) => p.id.toString() == id && p.isFavorite,
-    );
-  }
-
-  // ================= CART =================
-  Future<void> addToCart(Product product) async {
+  // ================= 🛒 CART OPERATIONS =================
+  void addToCart(Product product) {
     final id = product.id.toString();
-
     if (_cartItems.containsKey(id)) {
       _cartItems[id]!.quantity++;
     } else {
       _cartItems[id] = CartItem(id: id, product: product);
     }
-
-    await _saveCart();
     notifyListeners();
   }
 
-  Future<void> increaseQty(String id) async {
+  void increaseQty(String id) {
     if (_cartItems.containsKey(id)) {
       _cartItems[id]!.quantity++;
-      await _saveCart();
       notifyListeners();
     }
   }
 
-  Future<void> decreaseQty(String id) async {
+  void decreaseQty(String id) {
     if (_cartItems.containsKey(id)) {
       if (_cartItems[id]!.quantity > 1) {
         _cartItems[id]!.quantity--;
       } else {
         _cartItems.remove(id);
       }
-
-      await _saveCart();
       notifyListeners();
     }
   }
 
-  Future<void> removeFromCart(String id) async {
+  void removeFromCart(String id) {
     _cartItems.remove(id);
-    await _saveCart();
     notifyListeners();
   }
 
-  Future<void> clearCart() async {
-    _cartItems.clear();
-    await _saveCart();
-    notifyListeners();
+  @override
+  void dispose() {
+    _productsSubscription?.cancel();
+    _favoritesSubscription?.cancel(); 
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
-  Future<void> _saveCart() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final jsonList = _cartItems.values.map((e) => e.toJson()).toList();
-
-    await prefs.setString('cart_items', jsonEncode(jsonList));
-  }
-
-  Future<void> _loadSavedCart() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final data = prefs.getString('cart_items');
-
-    if (data != null) {
-      final List<dynamic> jsonList = jsonDecode(data);
-
-      _cartItems.clear();
-
-      for (var json in jsonList) {
-        final item = CartItem.fromJson(json);
-        _cartItems[item.id] = item;
-      }
-    }
-
-    notifyListeners();
-  }
+  // دوال إضافية للسلة والمفضلة
+  int get cartCount => _cartItems.values.fold(0, (sum, item) => sum + item.quantity);
+  double get totalPrice => _cartItems.values.fold(0, (sum, item) => sum + (item.product.price * item.quantity));
+  List<Product> get favoriteProducts => _products.where((p) => _favoriteIds.contains(p.id.toString())).toList();
+  bool isProductFavorite(String id) => _favoriteIds.contains(id);
 }
