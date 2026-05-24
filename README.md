@@ -1,24 +1,24 @@
-# 🛍️ Flutter E-Commerce App (Final Task)
+# 💚 Skincare App (Final Task)
 
-A Flutter e-commerce application built as a final academic project.
+A Flutter skincare shopping application built as a final academic project.
 
 ---
 
 ## 📱 Overview
 
-This app allows users to browse products, manage a shopping cart, and save favorites.  
-It supports offline usage and real-time updates using Firebase and local storage.
+This application allows users to browse skincare products, add items to cart, and manage favorites.  
+It supports offline storage and real-time data using Firebase and local database.
 
 ---
 
 ## ✨ Features
 
 - 🔐 Firebase Authentication (Login / Signup)
-- 🛍️ Products fetched from Firebase Firestore
+- 🛍️ Skincare products from Firebase Firestore
 - 🛒 Shopping Cart with offline support (SQLite)
 - ❤️ Favorites system per user
 - 🌙 Dark / Light theme with saved preference (SharedPreferences)
-- 📦 Persistent local data storage
+- 📦 Local persistent storage
 
 ---
 
@@ -34,7 +34,7 @@ It supports offline usage and real-time updates using Firebase and local storage
 
 ## 🚀 Run Project
 
-```bash id="u4k9ls"
+```bash
 git clone https://github.com/Roua122/Final-Task.git
 flutter pub get
 flutter run
