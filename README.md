@@ -1,17 +1,40 @@
-# skincare
+# 🛍️ Flutter E-Commerce App (Final Task)
 
-A new Flutter project.
+A Flutter e-commerce application built as a final academic project.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 📱 Overview
 
-A few resources to get you started if this is your first Flutter project:
+This app allows users to browse products, manage a shopping cart, and save favorites.  
+It supports offline usage and real-time updates using Firebase and local storage.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## ✨ Features
+
+- 🔐 Firebase Authentication (Login / Signup)
+- 🛍️ Products fetched from Firebase Firestore
+- 🛒 Shopping Cart with offline support (SQLite)
+- ❤️ Favorites system per user
+- 🌙 Dark / Light theme with saved preference (SharedPreferences)
+- 📦 Persistent local data storage
+
+---
+
+## 🧰 Tech Stack
+
+- Flutter
+- Firebase (Auth + Firestore)
+- Provider (State Management)
+- SQLite (sqflite)
+- SharedPreferences
+
+---
+
+## 🚀 Run Project
+
+```bash id="u4k9ls"
+git clone https://github.com/Roua122/Final-Task.git
+flutter pub get
+flutter run
