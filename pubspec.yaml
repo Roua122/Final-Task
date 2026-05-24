@@ -13,27 +13,34 @@ dependencies:
 
   # UI & Icons
   cupertino_icons: ^1.0.8
-
+  
   # State Management
   provider: ^6.0.5
 
   # Networking
   http: ^1.2.0
 
-  # Local Storage (Favorites + Cache)
+  # Local Storage & Path
   shared_preferences: ^2.5.5
   path_provider: ^2.1.2
+  path: ^1.9.1
 
-  # Image caching (OFFLINE IMAGES FIX)
+  # Image caching
   cached_network_image: ^3.4.1
+
+  # Firebase
   firebase_core: ^4.9.0
   cloud_firestore: ^6.4.1
   firebase_auth: ^6.5.1
 
+  # Database
+  sqflite: ^2.4.2+1
+  sqflite_common_ffi: ^2.3.0
+  sqflite_common_ffi_web: ^1.1.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   flutter_lints: ^6.0.0
 
 flutter:

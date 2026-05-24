@@ -1,8 +1,10 @@
 // presentation/screens/main_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/providers/app_provider.dart';
+import '../../data/providers/theme_provider.dart';
 import '../../core/theme/app_theme.dart';
 
 import 'home_screen.dart';
@@ -20,7 +22,8 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen>
     with SingleTickerProviderStateMixin {
-  int _currentIndex = 0;
+  // 🔥 مهم جداً لمنع الرجوع للهوم عند تغيير الثيم
+  static int _currentIndex = 0;
 
   late AnimationController _heartController;
 
@@ -58,12 +61,20 @@ class _MainScreenState extends State<MainScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.watch<ThemeProvider>().isDarkMode;
+
+    final primaryColor = AppTheme.lightTheme.primaryColor;
+
     return Consumer<AppProvider>(
       builder: (context, provider, _) {
         final cartCount = provider.cartCount;
+
         final hasFav = provider.favoriteProducts.isNotEmpty;
+
         return Container(
-          decoration: AppTheme.backgroundGradient,
+          decoration: isDark
+              ? AppTheme.darkBackgroundGradient
+              : AppTheme.lightBackgroundGradient,
           child: Scaffold(
             backgroundColor: Colors.transparent,
             body: IndexedStack(
@@ -71,22 +82,32 @@ class _MainScreenState extends State<MainScreen>
               children: _screens,
             ),
             bottomNavigationBar: NavigationBar(
+              backgroundColor: isDark
+                  ? Colors.black.withOpacity(0.5)
+                  : Colors.white.withOpacity(0.7),
+              indicatorColor: primaryColor.withOpacity(0.15),
               selectedIndex: _currentIndex,
               onDestinationSelected: (index) {
-                setState(() => _currentIndex = index);
+                setState(() {
+                  _currentIndex = index;
+                });
               },
               destinations: [
+                // 🏠 الرئيسية
                 const NavigationDestination(
                   icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home_rounded),
                   label: 'Home',
                 ),
 
+                // 📂 التصنيفات
                 const NavigationDestination(
                   icon: Icon(Icons.category_outlined),
+                  selectedIcon: Icon(Icons.category_rounded),
                   label: 'Explore',
                 ),
 
-                // ❤️ المفضلة (نبض فقط بدون ألوان ثابتة)
+                // ❤️ المفضلة
                 NavigationDestination(
                   icon: AnimatedBuilder(
                     animation: _heartController,
@@ -94,10 +115,10 @@ class _MainScreenState extends State<MainScreen>
                       return Transform.scale(
                         scale: _heartController.value,
                         child: Icon(
-                          Icons.favorite,
+                          hasFav ? Icons.favorite : Icons.favorite_border,
                           color: hasFav
                               ? Theme.of(context).colorScheme.error
-                              : Theme.of(context).disabledColor,
+                              : Theme.of(context).iconTheme.color,
                         ),
                       );
                     },
@@ -110,13 +131,24 @@ class _MainScreenState extends State<MainScreen>
                   icon: Badge(
                     label: Text('$cartCount'),
                     isLabelVisible: cartCount > 0,
-                    child: const Icon(Icons.shopping_bag_outlined),
+                    child: const Icon(
+                      Icons.shopping_bag_outlined,
+                    ),
+                  ),
+                  selectedIcon: Badge(
+                    label: Text('$cartCount'),
+                    isLabelVisible: cartCount > 0,
+                    child: const Icon(
+                      Icons.shopping_bag_rounded,
+                    ),
                   ),
                   label: 'Cart',
                 ),
 
+                // 👤 البروفايل
                 const NavigationDestination(
                   icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person_rounded),
                   label: 'Profile',
                 ),
               ],

@@ -1,7 +1,6 @@
 // presentation/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../../data/providers/app_provider.dart';
 import '../widgets/product_card.dart';
 
@@ -23,15 +22,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
+    // 🔥 تشغيل التحميل عند فتح الشاشة لأول مرة
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<AppProvider>();
+      // استدعاء دالة الاستماع للمنتجات
+      provider.listenToProducts();
 
-      if (provider.products.isEmpty) {
-        await provider.init();
-      }
-
-      // 🔥 تشغيل animation بعد تحميل البيانات
       if (mounted) {
         _fadeController.forward();
       }
@@ -100,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // ================= REFRESH =================
   Future<void> _refresh(AppProvider provider) async {
-    provider.init();
+    provider.listenToProducts();
   }
 
   // ================= ANIMATED GRID =================
@@ -153,32 +149,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     const SizedBox(height: 20),
 
-                    // ================= OFFLINE MESSAGE =================
-                    if (provider.isOfflineMode)
-                      Container(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 10),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.orange),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.wifi_off, color: Colors.orange),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                "Offline Mode - Showing cached data",
-                                style: TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    // ================= BANNER (الآمن للأوفلاين) =================
+                    // ================= BANNER =================
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 20),
                       width: double.infinity,
@@ -188,18 +159,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            // استخدام Image.network الآمن بدلاً من DecorationImage
                             Image.network(
                               "https://images.unsplash.com/photo-1612817288484-6f916006741a?q=80&w=1200",
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                color: const Color(0xFF1A531A),
-                                child: const Center(
-                                  child: Icon(Icons.wifi_off_rounded,
-                                      color: Colors.white54, size: 40),
-                                ),
-                              ),
                             ),
                             Container(
                               decoration: BoxDecoration(
@@ -216,23 +178,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               child: const Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    "BOTANICAL SERIES",
-                                    style: TextStyle(
-                                      color: Color(0xFFD4AF37),
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 12,
-                                    ),
-                                  ),
+                                  Text("BOTANICAL SERIES",
+                                      style: TextStyle(
+                                          color: Color(0xFFD4AF37),
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 12)),
                                   SizedBox(height: 10),
-                                  Text(
-                                    "Pure Ingredients.\nProven Results.",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  Text("Pure Ingredients.\nProven Results.",
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold)),
                                 ],
                               ),
                             ),
@@ -268,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             // ================= LOADER OVERLAY =================
             if (provider.isLoading && provider.products.isEmpty)
               Container(
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withOpacity(0.9),
                 child: Center(child: _buildLoader()),
               ),
           ],
